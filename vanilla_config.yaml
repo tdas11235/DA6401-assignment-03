@@ -1,0 +1,31 @@
+method: bayes
+
+metric:
+  name: best_val_acc
+  goal: maximize
+
+parameters:
+  embedding_dim:
+    values: [64, 128, 256]
+
+  hidden_dim:
+    values: [64, 128, 256]
+
+  num_layers:
+    values: [2, 3]
+
+  cell_type:
+    values: ['GRU', 'LSTM', 'RNN']
+
+  dropout:
+    distribution: uniform
+    min: 0.25
+    max: 0.31
+
+  lr:
+    distribution: log_uniform_values
+    min: 8e-4
+    max: 1e-3
+
+  beam_width:
+    values: [1, 2, 3]
