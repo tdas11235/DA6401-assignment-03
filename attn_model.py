@@ -25,17 +25,11 @@ class Attention(nn.Module):
         self.v = nn.Linear(hidden_dim, 1, bias=False)
 
     def forward(self, decoder_hidden, encoder_outputs):
-        # decoder_hidden: (batch, hidden_dim)
-        # encoder_outputs: (batch, seq_len, hidden_dim)
-        # Expand decoder hidden state to match encoder_outputs shape
         decoder_hidden_expanded = decoder_hidden.unsqueeze(1).expand_as(encoder_outputs)
-        # Calculate alignment scores
-        energy = torch.tanh(self.W1(encoder_outputs) + self.W2(decoder_hidden_expanded))  # (batch, seq_len, hidden)
-        scores = self.v(energy).squeeze(2)  # (batch, seq_len)
-        # Softmax to get attention weights
-        attn_weights = F.softmax(scores, dim=1)  # (batch, seq_len)
-        # Compute context vector
-        context = torch.bmm(attn_weights.unsqueeze(1), encoder_outputs).squeeze(1)  # (batch, hidden_dim)
+        e = torch.tanh(self.W1(encoder_outputs) + self.W2(decoder_hidden_expanded))
+        scores = self.v(e).squeeze(2)
+        attn_weights = F.softmax(scores, dim=1)
+        context = torch.bmm(attn_weights.unsqueeze(1), encoder_outputs).squeeze(1)
         return context, attn_weights
 
 
@@ -48,18 +42,16 @@ class Decoder(nn.Module):
         self.cell = cell(embedding_dim + hidden_dim, hidden_dim, num_layers=num_layers,
                          batch_first=True, dropout=dropout if num_layers > 1 else 0)
         self.attention = Attention(hidden_dim)
-        self.output_layer = nn.Linear(hidden_dim * 2, target_vocab_size)  # hidden + context concatenated
+        self.output_layer = nn.Linear(hidden_dim * 2, target_vocab_size)
 
     def forward(self, input_token, hidden, encoder_outputs):
         # input_token: (batch, 1)
         embedded = self.embedding(input_token)  # (batch, 1, emb_dim)
-        # Get decoder hidden last layer's hidden state for attention query
         if isinstance(hidden, tuple):  # LSTM
             dec_hidden = hidden[0][-1]  # (batch, hidden_dim)
         else:
             dec_hidden = hidden[-1]     # (batch, hidden_dim)
         context, attn_weights = self.attention(dec_hidden, encoder_outputs)  # (batch, hidden_dim)
-        # Concatenate embedded input and context vector along feature dim
         rnn_input = torch.cat([embedded, context.unsqueeze(1)], dim=2)  # (batch, 1, emb+hidden)
         output, hidden = self.cell(rnn_input, hidden)  # output: (batch, 1, hidden_dim)
         output = output.squeeze(1)  # (batch, hidden_dim)
