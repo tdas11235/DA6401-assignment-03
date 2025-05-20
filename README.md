@@ -29,3 +29,5 @@ Roll No: CH21B108
 11. test_vanilla.py: code for testing the trained vanilla model
 
 12. test_attn.ipynb: code for testing the trained attention based model 
+
+13. *config.yaml: config files for sweeps
